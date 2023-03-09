@@ -282,6 +282,7 @@ func WriteConfigFile(configFilePath string, config interface{}) {
 
 func mustWriteFile(filePath string, contents []byte, mode os.FileMode) {
 	if err := os.WriteFile(filePath, contents, mode); err != nil {
-		panic(fmt.Errorf("failed to write file: %w", err))
+		fmt.Printf(fmt.Sprintf("failed to write file: %v", err) + "\n")
+		os.Exit(1)
 	}
 }

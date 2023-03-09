@@ -4,7 +4,6 @@ package simapp
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -225,31 +224,21 @@ func NewSimApp(
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 	txConfig := encodingConfig.TxConfig
 
-	// Below we could construct and set an application specific mempool and
-	// ABCI 1.0 PrepareProposal and ProcessProposal handlers. These defaults are
-	// already set in the SDK's BaseApp, this shows an example of how to override
+	// Below we could construct and set an application specific mempool and ABCI 1.0 Prepare and Process Proposal
+	// handlers. These defaults are already set in the SDK's BaseApp, this shows an example of how to override
 	// them.
 	//
-	// Example:
-	//
-	// bApp := baseapp.NewBaseApp(...)
 	// nonceMempool := mempool.NewSenderNonceMempool()
-	// abciPropHandler := NewDefaultProposalHandler(nonceMempool, bApp)
-	//
-	// bApp.SetMempool(nonceMempool)
-	// bApp.SetPrepareProposal(abciPropHandler.PrepareProposalHandler())
-	// bApp.SetProcessProposal(abciPropHandler.ProcessProposalHandler())
-	//
-	// Alternatively, you can construct BaseApp options, append those to
-	// baseAppOptions and pass them to NewBaseApp.
-	//
-	// Example:
-	//
-	// prepareOpt = func(app *baseapp.BaseApp) {
-	// 	abciPropHandler := baseapp.NewDefaultProposalHandler(nonceMempool, app)
-	// 	app.SetPrepareProposal(abciPropHandler.PrepareProposalHandler())
+	// mempoolOpt   := baseapp.SetMempool(nonceMempool)
+	// prepareOpt   := func(app *baseapp.BaseApp) {
+	// 	app.SetPrepareProposal(app.DefaultPrepareProposal())
 	// }
-	// baseAppOptions = append(baseAppOptions, prepareOpt)
+	// processOpt := func(app *baseapp.BaseApp) {
+	// 	app.SetProcessProposal(app.DefaultProcessProposal())
+	// }
+	//
+	// Further down we'd set the options in the AppBuilder like below.
+	// baseAppOptions = append(baseAppOptions, mempoolOpt, prepareOpt, processOpt)
 
 	bApp := baseapp.NewBaseApp(appName, logger, db, txConfig.TxDecoder(), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
@@ -272,7 +261,8 @@ func NewSimApp(
 
 	// register the streaming service with the BaseApp
 	if err := bApp.SetStreamingService(appOpts, appCodec, keys); err != nil {
-		panic(fmt.Errorf("failed to load state streaming: %w", err))
+		logger.Error("failed to load state streaming", "err", err)
+		os.Exit(1)
 	}
 
 	app := &SimApp{
@@ -527,7 +517,8 @@ func NewSimApp(
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
-			panic(fmt.Errorf("error loading last version: %w", err))
+			logger.Error("error on loading last version", "err", err)
+			os.Exit(1)
 		}
 	}
 
